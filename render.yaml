@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ftfr-sla-dashboard
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: NODE_VERSION
+        value: 18.20.4
