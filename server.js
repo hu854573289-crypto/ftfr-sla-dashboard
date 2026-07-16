@@ -6,6 +6,25 @@ const mongoose = require('mongoose');
 const app = express();
 app.use(express.json({ limit: '25mb' }));
 
+// ---------- Password protection (HTTP Basic Auth) ----------
+// This runs on the server, before any page or API response is sent, so
+// unlike a password check baked into the frontend HTML/JS, the page content
+// and data are never sent to an unauthenticated browser in the first place.
+// The password can be overridden via the DASHBOARD_PASSWORD env var (set it
+// in Render's Environment settings) without touching this file. Any
+// username is accepted — only the password is checked.
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'Mindray99!';
+app.use((req, res, next) => {
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Basic ')) {
+    const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf8');
+    const password = decoded.slice(decoded.indexOf(':') + 1);
+    if (password === DASHBOARD_PASSWORD) return next();
+  }
+  res.set('WWW-Authenticate', 'Basic realm="FTFR SLA Dashboard"');
+  res.status(401).send('Password required.');
+});
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
