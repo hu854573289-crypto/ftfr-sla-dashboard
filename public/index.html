@@ -121,7 +121,18 @@
     display:flex; flex-wrap:wrap; gap: 14px; align-items:flex-end;
   }
   .field{ display:flex; flex-direction:column; gap:6px; }
-  .field label{ font-family: var(--font-mono); font-size: 10.5px; letter-spacing:0.05em; text-transform:uppercase; color: var(--text-dimmer); font-weight:600; }
+  .field label{ display:flex; flex-direction:column; gap:2px; }
+
+  /* ---------- Bilingual labels (中文 + English caption) ---------- */
+  .bi{ display:flex; flex-direction:column; gap:2px; }
+  .bi .zh{ font-size: 12px; font-weight:600; color: var(--text-dim); font-family: var(--font-body); text-transform:none; letter-spacing:0; }
+  .bi .en{ font-size: 9.5px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color: var(--text-dimmer); font-style: italic; font-family: var(--font-body); }
+  .bi-title{ display:flex; flex-direction:column; gap:2px; }
+  .bi-title .zh{ font-size:15px; font-weight:700; color: var(--text); font-family: var(--font-display); }
+  .bi-title .en{ font-size:10.5px; font-weight:500; letter-spacing:0.06em; text-transform:uppercase; color: var(--text-dimmer); font-style: italic; margin-top:2px; }
+  .bi-th{ display:flex; flex-direction:column; gap:1px; }
+  .bi-th .zh{ font-size:11px; font-weight:600; color: var(--text-dim); text-transform:none; }
+  .bi-th .en{ font-size:8.5px; font-weight:500; letter-spacing:0.04em; text-transform:uppercase; color: var(--text-dimmer); font-style: italic; }
   .msel{ position:relative; }
   .msel-btn{
     min-width: 168px; text-align:left; background: var(--bg-elevated); border:1px solid var(--border);
@@ -307,27 +318,27 @@
 
   <header class="top">
     <div>
-      <div class="brand-eyebrow"><span class="dot"></span>FIELD SERVICE &middot; SLA MONITORING</div>
-      <h1>FTFR Service SLA Board</h1>
-      <div class="subtitle">从创建到服务完成的时效追踪 &mdash; 按区域、客户等级筛选，自动计算 SLA 超期状态。</div>
+      <div class="brand-eyebrow"><span class="dot"></span>FIELD SERVICE &middot; SLA MONITORING &middot; 现场服务时效监控</div>
+      <h1>FTFR Service SLA Board <span style="font-size:13px; font-weight:500; color:var(--text-dim);">工单时效看板</span></h1>
+      <div class="subtitle">从创建到服务完成的时效追踪 &mdash; 按区域、客户等级筛选，自动计算 SLA 超期状态。<br>Tracking time-to-resolution from creation to completion — filter by region and customer tier, with automatic SLA overdue detection.</div>
     </div>
     <div class="top-actions">
       <label class="btn" for="fileInput">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
-        导入数据
+        导入数据 Import
       </label>
       <input type="file" id="fileInput" accept=".xlsx,.xls">
-      <button class="btn" id="syncBtn" title="从服务器重新拉取最新的共享数据和备注">
+      <button class="btn" id="syncBtn" title="从服务器重新拉取最新的共享数据和备注 Refresh from server">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h5M20 20v-5h-5M5.5 9a7 7 0 0112-3M18.5 15a7 7 0 01-12 3"/></svg>
-        刷新数据
+        刷新数据 Refresh
       </button>
       <button class="btn" id="exportBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V4a1 1 0 011-1h14a1 1 0 011 1v3"/></svg>
-        导出筛选结果
+        导出筛选结果 Export
       </button>
       <button class="btn ghost" id="clearBtn" title="清除已保存的数据，恢复导入前状态">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3m-8 0l1 13a1 1 0 001 1h6a1 1 0 001-1l1-13"/></svg>
-        清除数据
+        清除数据 Clear
       </button>
     </div>
   </header>
@@ -336,18 +347,18 @@
 
   <section class="region-panel">
     <div class="region-panel-head">
-      <div class="region-panel-title">按区域统计 (III Region*)</div>
-      <div class="region-panel-sub">随筛选条件联动 — 当前列表按区域拆分的完成情况</div>
+      <div class="region-panel-title bi-title"><span class="zh">按区域统计 (III Region*)</span><span class="en">Region Breakdown (III Region*)</span></div>
+      <div class="region-panel-sub">随筛选条件联动 — 当前列表按区域拆分的完成情况 · Reflects current filters — completion breakdown by region</div>
     </div>
     <div class="region-table" id="regionStats"></div>
   </section>
 
   <section class="filters">
     <div class="field">
-      <label>区域 (III Region*)</label>
+      <label class="bi"><span class="zh">区域 (III Region*)</span><span class="en">Region (III Region*)</span></label>
       <div class="msel" id="mselRegion">
         <button class="msel-btn" data-target="panelRegion">
-          <span class="lbl">全部区域</span>
+          <span class="lbl">全部区域 All Regions</span>
           <span class="count" style="display:none"></span>
         </button>
         <div class="msel-panel" id="panelRegion"></div>
@@ -355,10 +366,10 @@
     </div>
 
     <div class="field">
-      <label>客户等级 IVD</label>
+      <label class="bi"><span class="zh">客户等级 IVD</span><span class="en">Customer Level IVD</span></label>
       <div class="msel" id="mselLevel">
         <button class="msel-btn" data-target="panelLevel">
-          <span class="lbl">全部等级</span>
+          <span class="lbl">全部等级 All Levels</span>
           <span class="count" style="display:none"></span>
         </button>
         <div class="msel-panel" id="panelLevel"></div>
@@ -366,10 +377,10 @@
     </div>
 
     <div class="field">
-      <label>统计月份 (21日-次月20日)</label>
+      <label class="bi"><span class="zh">统计月份 (21日-次月20日)</span><span class="en">Service Month (21st&ndash;20th)</span></label>
       <div class="msel" id="mselMonth">
         <button class="msel-btn" data-target="panelMonth">
-          <span class="lbl">全部月份</span>
+          <span class="lbl">全部月份 All Months</span>
           <span class="count" style="display:none"></span>
         </button>
         <div class="msel-panel" id="panelMonth"></div>
@@ -377,36 +388,36 @@
     </div>
 
     <div class="field">
-      <label>完成状态</label>
+      <label class="bi"><span class="zh">完成状态</span><span class="en">Completion Status</span></label>
       <div class="status-toggle">
-        <label class="chip active" id="chipDone"><input type="checkbox" checked> 已完成</label>
-        <label class="chip active" id="chipUndone"><input type="checkbox" checked> 未完成</label>
+        <label class="chip active" id="chipDone"><input type="checkbox" checked> 已完成 Completed</label>
+        <label class="chip active" id="chipUndone"><input type="checkbox" checked> 未完成 Open</label>
       </div>
     </div>
 
     <div class="field">
-      <label>超期工单</label>
+      <label class="bi"><span class="zh">超期工单</span><span class="en">Overdue Tickets</span></label>
       <div class="status-toggle">
-        <label class="chip" id="chipOverdue"><input type="checkbox"> 只看超期</label>
+        <label class="chip" id="chipOverdue"><input type="checkbox"> 只看超期 Overdue Only</label>
       </div>
     </div>
 
     <div class="field">
-      <label>创建时间 从 (Create Datetime)</label>
+      <label class="bi"><span class="zh">创建时间 从 (Create Datetime)</span><span class="en">Created From</span></label>
       <input type="date" id="dateFrom">
     </div>
     <div class="field">
-      <label>创建时间 至</label>
+      <label class="bi"><span class="zh">创建时间 至</span><span class="en">Created To</span></label>
       <input type="date" id="dateTo">
     </div>
 
     <div class="field grow">
-      <label>搜索 (工单号 / 序列号 / 客户)</label>
-      <input type="text" class="search" id="searchBox" placeholder="输入关键字搜索...">
+      <label class="bi"><span class="zh">搜索 (工单号 / 序列号 / 客户)</span><span class="en">Search (Order/Serial/Customer)</span></label>
+      <input type="text" class="search" id="searchBox" placeholder="输入关键字搜索... Search...">
     </div>
 
     <div class="spacer"></div>
-    <button class="reset-link" id="resetFilters">重置筛选</button>
+    <button class="reset-link" id="resetFilters">重置筛选 Reset</button>
   </section>
 
   <section class="list-panel">
@@ -418,7 +429,7 @@
     </div>
   </section>
 
-  <footer class="note">数据保存在你自己部署的 MongoDB 数据库中，打开这个网址的所有人看到、修改的都是同一份实时数据。</footer>
+  <footer class="note">数据保存在你自己部署的 MongoDB 数据库中，打开这个网址的所有人看到、修改的都是同一份实时数据。<br>Data lives in your own MongoDB database — everyone who opens this URL sees and edits the same live data.</footer>
 </div>
 
 <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
@@ -431,25 +442,25 @@ const DEFAULT_DATA = [{"region": "ASEAN REGION", "productLine": "IVD", "subProdu
 // Visible summary columns (always shown, aligned to --grid-cols in CSS).
 // Everything else lives in DETAIL_FIELDS and is always shown below each card.
 const SUMMARY_COLS = [
-  { key:'region', label:'区域', sortable:true },
-  { key:'model', label:'型号', sortable:true, hideNarrow:true },
-  { key:'orderNo', label:'工单号 / 序列号', sortable:true },
-  { key:'custLevel', label:'客户等级', sortable:true },
-  { key:'created', label:'创建时间', sortable:true },
-  { key:'slaHours', label:'SLA 时长', sortable:true, hideNarrow:true },
-  { key:'statusFlag', label:'状态', sortable:true },
+  { key:'region', label:'区域', enLabel:'Region', sortable:true },
+  { key:'model', label:'型号', enLabel:'Model', sortable:true, hideNarrow:true },
+  { key:'orderNo', label:'工单号 / 序列号', enLabel:'Order No / Serial', sortable:true },
+  { key:'custLevel', label:'客户等级', enLabel:'Cust. Level', sortable:true },
+  { key:'created', label:'创建时间', enLabel:'Created', sortable:true },
+  { key:'slaHours', label:'SLA 时长', enLabel:'SLA Duration', sortable:true, hideNarrow:true },
+  { key:'statusFlag', label:'状态', enLabel:'Status', sortable:true },
 ];
 
 // Extra detail fields, always shown in a panel under each card.
 const DETAIL_FIELDS = [
-  { key:'productLine', label:'产品线' },
-  { key:'subProduct', label:'子产品线' },
-  { key:'orderStatus', label:'工单状态 (Order Status)' },
-  { key:'completed', label:'服务完成时间', type:'date' },
-  { key:'customerName', label:'客户名称' },
-  { key:'engineerName', label:'服务工程师' },
-  { key:'mindrayEngineer', label:'迈瑞工程师' },
-  { key:'threshold', label:'SLA 阈值' },
+  { key:'productLine', label:'产品线', enLabel:'Product Line' },
+  { key:'subProduct', label:'子产品线', enLabel:'Sub-Product Line' },
+  { key:'orderStatus', label:'工单状态 (Order Status)', enLabel:'Order Status' },
+  { key:'completed', label:'服务完成时间', enLabel:'Service Completed', type:'date' },
+  { key:'customerName', label:'客户名称', enLabel:'Customer Name' },
+  { key:'engineerName', label:'服务工程师', enLabel:'Service Engineer' },
+  { key:'mindrayEngineer', label:'迈瑞工程师', enLabel:'Mindray Engineer' },
+  { key:'threshold', label:'SLA 阈值', enLabel:'SLA Threshold' },
 ];
 
 const HEADER_ALIASES = {
@@ -715,7 +726,7 @@ function renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel){
   });
   const actions = document.createElement('div');
   actions.className = 'msel-actions';
-  actions.innerHTML = `<button type="button" data-act="all">全选</button><button type="button" data-act="none">清空</button>`;
+  actions.innerHTML = `<button type="button" data-act="all">全选 All</button><button type="button" data-act="none">清空 Clear</button>`;
   actions.querySelector('[data-act="all"]').addEventListener('click', () => {
     values.forEach(v => selectedSet.add(v));
     renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel);
@@ -739,7 +750,7 @@ function updateMselLabel(panelId, values, selectedSet, allLabel){
     lbl.textContent = allLabel;
     countEl.style.display = 'none';
   } else {
-    lbl.textContent = selectedSet.size === 1 ? Array.from(selectedSet)[0] : '已选择';
+    lbl.textContent = selectedSet.size === 1 ? Array.from(selectedSet)[0] : '已选择 Selected';
     countEl.style.display = 'inline-block';
     countEl.textContent = selectedSet.size;
   }
@@ -817,19 +828,19 @@ function renderKPIs(){
   const kpiRow = document.getElementById('kpiRow');
   kpiRow.innerHTML = `
     <div class="kpi">
-      <div class="label">工单总数</div>
+      <div class="label bi"><span class="zh">工单总数</span><span class="en">Total Tickets</span></div>
       <div class="value">${total}</div>
     </div>
     <div class="kpi">
-      <div class="label">已完成</div>
+      <div class="label bi"><span class="zh">已完成</span><span class="en">Completed</span></div>
       <div class="value">${done}<small>/ ${total}</small></div>
     </div>
     <div class="kpi pending">
-      <div class="label">未完成</div>
+      <div class="label bi"><span class="zh">未完成</span><span class="en">Open</span></div>
       <div class="value">${undone}</div>
     </div>
     <div class="kpi overdue">
-      <div class="label">超期 (含进行中)</div>
+      <div class="label bi"><span class="zh">超期 (含进行中)</span><span class="en">Overdue (incl. In Progress)</span></div>
       <div class="value">${overdueDone + overdueOpen}<small>已完成超期 ${overdueDone}</small></div>
     </div>
     <div class="kpi gauge">
@@ -840,7 +851,7 @@ function renderKPIs(){
           transform="rotate(-90 30 30)"/>
       </svg>
       <div>
-        <div class="label">按时完成率</div>
+        <div class="label bi"><span class="zh">按时完成率</span><span class="en">On-Time Rate</span></div>
         <div class="gauge-text">${onTimeRate}%</div>
       </div>
     </div>
@@ -856,11 +867,11 @@ function fmtDate(d){
 
 function statusBadge(row){
   switch(row._status){
-    case 'overdue': return `<span class="badge red">已超期</span>`;
-    case 'ontime': return `<span class="badge green">按时完成</span>`;
-    case 'done-nodate': return `<span class="badge teal">已完成 (无完成时间)</span>`;
-    case 'progress': return `<span class="badge amber">进行中</span>`;
-    case 'overdue-open': return `<span class="badge orange">进行中·已超期</span>`;
+    case 'overdue': return `<span class="badge red">已超期 Overdue</span>`;
+    case 'ontime': return `<span class="badge green">按时完成 On Time</span>`;
+    case 'done-nodate': return `<span class="badge teal">已完成·无时间 Completed (No Time)</span>`;
+    case 'progress': return `<span class="badge amber">进行中 In Progress</span>`;
+    case 'overdue-open': return `<span class="badge orange">进行中·超期 In Progress·Overdue</span>`;
     default: return `<span class="badge dim">—</span>`;
   }
 }
@@ -881,7 +892,7 @@ function renderListHead(){
   head.innerHTML = SUMMARY_COLS.map(c => {
     const arrow = sortState.key === c.key ? (sortState.dir === 'asc' ? '▲' : '▼') : '';
     const narrowClass = c.hideNarrow ? ' hide-narrow' : '';
-    return `<div class="col${narrowClass}" data-key="${c.key}">${c.label}<span class="arrow">${arrow}</span></div>`;
+    return `<div class="col${narrowClass}" data-key="${c.key}"><span class="bi-th"><span class="zh">${c.label}</span><span class="en">${c.enLabel || ''}</span></span><span class="arrow">${arrow}</span></div>`;
   }).join('');
   head.querySelectorAll('.col[data-key]').forEach(col => {
     col.addEventListener('click', () => {
@@ -898,7 +909,7 @@ function slaCellHTML(r){
     return `${r._sla.toFixed(1)} h <span style="color:var(--text-dimmer)">/ ${r._threshold}h</span>`;
   }
   if(r._status === 'done-nodate'){
-    return `<span style="color:var(--text-dimmer)">已完成·无时间</span>`;
+    return `<span style="color:var(--text-dimmer)">已完成·无时间 Completed, no timestamp</span>`;
   }
   return '—';
 }
@@ -916,7 +927,7 @@ function renderListBody(){
   const pageRows = VIEW.slice(start, start + PAGE_SIZE);
 
   if(pageRows.length === 0){
-    body.innerHTML = `<div class="empty-state"><div class="big">没有匹配的数据</div>调整筛选条件，或导入新的数据文件。</div>`;
+    body.innerHTML = `<div class="empty-state"><div class="big">没有匹配的数据 No matching data</div>调整筛选条件，或导入新的数据文件。<br>Try adjusting the filters, or import a new data file.</div>`;
     return;
   }
 
@@ -944,7 +955,7 @@ function renderListBody(){
 
     const items = DETAIL_FIELDS.map(f => `
       <div class="detail-item">
-        <div class="dk">${f.label}</div>
+        <div class="dk bi"><span class="zh">${f.label}</span><span class="en">${f.enLabel || ''}</span></div>
         <div class="dv">${detailValueHTML(f, r)}</div>
       </div>`).join('');
 
@@ -983,17 +994,17 @@ function annotationBlockHTML(r){
 
   return `
     <div class="annotation-panel" data-order="${orderKey.replace(/"/g,'&quot;')}">
-      <div class="annot-label">超期原因登记</div>
+      <div class="annot-label">超期原因登记 Overdue Reason Log</div>
       <div class="annot-row">
         <select class="annot-category">${categoryOptions}</select>
         <select class="annot-reason">${reasonOptions}</select>
         <select class="annot-cause">${causeOptions}</select>
       </div>
       <div class="annot-action" data-role="action" style="${actionText ? '' : 'display:none;'}">
-        <span class="annot-action-label">建议措施 (Actions)</span>
+        <span class="annot-action-label">建议措施 Suggested Actions</span>
         <span class="annot-action-text">${actionText.replace(/\n/g,'<br>')}</span>
       </div>
-      <textarea class="annot-note" rows="2" placeholder="补充备注（可选）…">${noteVal}</textarea>
+      <textarea class="annot-note" rows="2" placeholder="补充备注（可选）Additional notes (optional)…">${noteVal}</textarea>
       <div class="annot-meta" data-role="meta">${meta}</div>
     </div>`;
 }
@@ -1026,7 +1037,7 @@ function wireAnnotationControls(container){
         metaEl.style.color = 'var(--green)';
       }catch(err){
         console.error('save annotation failed', err);
-        metaEl.textContent = '保存失败，请检查网络或服务器状态（内容已保留在当前页面）';
+        metaEl.textContent = '保存失败，请检查网络或服务器状态（内容已保留在当前页面）Save failed — check network/server (kept locally)';
         metaEl.style.color = 'var(--red)';
       }
     }
@@ -1096,12 +1107,18 @@ function renderRegionStats(){
   const stats = computeRegionStats(VIEW);
 
   if(stats.length === 0){
-    el.innerHTML = `<div class="region-row"><div class="rname" style="color:var(--text-dimmer)">没有匹配的数据</div></div>`;
+    el.innerHTML = `<div class="region-row"><div class="rname" style="color:var(--text-dimmer)">没有匹配的数据 No matching data</div></div>`;
     return;
   }
 
   const head = `<div class="region-row head">
-    <div>区域</div><div>工单总数</div><div>未完成</div><div>已完成超期</div><div>进行中超期</div><div>平均时长(h)</div><div>按时完成率</div>
+    <div class="bi-th"><span class="zh">区域</span><span class="en">Region</span></div>
+    <div class="bi-th"><span class="zh">工单总数</span><span class="en">Total</span></div>
+    <div class="bi-th"><span class="zh">未完成</span><span class="en">Open</span></div>
+    <div class="bi-th"><span class="zh">已完成超期</span><span class="en">Overdue (Done)</span></div>
+    <div class="bi-th"><span class="zh">进行中超期</span><span class="en">Overdue (Open)</span></div>
+    <div class="bi-th"><span class="zh">平均时长(h)</span><span class="en">Avg Hours</span></div>
+    <div class="bi-th"><span class="zh">按时完成率</span><span class="en">On-Time Rate</span></div>
   </div>`;
 
   const rows = stats.map(s => `
@@ -1219,12 +1236,12 @@ function initFilterControls(){
   const regions = uniqueValues('region');
   const levels = uniqueValues('custLevel');
   const months = uniqueValues('_serviceMonth');
-  renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域');
-  renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级');
-  renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份');
-  updateMselLabel('panelRegion', regions, filterState.region, '全部区域');
-  updateMselLabel('panelLevel', levels, filterState.level, '全部等级');
-  updateMselLabel('panelMonth', months, filterState.month, '全部月份');
+  renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
+  renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
+  renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
+  updateMselLabel('panelRegion', regions, filterState.region, '全部区域 All Regions');
+  updateMselLabel('panelLevel', levels, filterState.level, '全部等级 All Levels');
+  updateMselLabel('panelMonth', months, filterState.month, '全部月份 All Months');
 
   const chipDone = document.getElementById('chipDone');
   const chipUndone = document.getElementById('chipUndone');
@@ -1271,12 +1288,12 @@ function initFilterControls(){
     chipDone.querySelector('input').checked = true; chipDone.classList.add('active');
     chipUndone.querySelector('input').checked = true; chipUndone.classList.add('active');
     chipOverdue.querySelector('input').checked = false; chipOverdue.classList.remove('active');
-    renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域');
-    renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级');
-    renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份');
-    updateMselLabel('panelRegion', regions, filterState.region, '全部区域');
-    updateMselLabel('panelLevel', levels, filterState.level, '全部等级');
-    updateMselLabel('panelMonth', months, filterState.month, '全部月份');
+    renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
+    renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
+    renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
+    updateMselLabel('panelRegion', regions, filterState.region, '全部区域 All Regions');
+    updateMselLabel('panelLevel', levels, filterState.level, '全部等级 All Levels');
+    updateMselLabel('panelMonth', months, filterState.month, '全部月份 All Months');
     page = 1; applyAndRender();
   });
 
@@ -1303,10 +1320,10 @@ function initFilterControls(){
       page = 1; applyAndRender();
       try{
         await saveData(RAW.map(stripComputed));
-        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据库（超期原因记录已按工单号自动匹配）`);
+        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据库（超期原因记录已按工单号自动匹配）Imported and synced to the database`);
       }catch(err){
         console.error('save failed', err);
-        showToast('已导入到当前页面，但保存到服务器失败，请检查网络或服务器状态');
+        showToast('已导入到当前页面，但保存到服务器失败，请检查网络或服务器状态 Saved locally, but syncing to the server failed');
       }
     }catch(err){
       console.error(err);
@@ -1333,24 +1350,24 @@ function initFilterControls(){
 
     page = 1; applyAndRender();
     if(dataOk || annotOk){
-      showToast(`已刷新最新的共享${dataOk ? '数据' : ''}${dataOk && annotOk ? '和' : ''}${annotOk ? '超期原因记录' : ''}`);
+      showToast(`已同步最新的共享${dataOk ? '数据' : ''}${dataOk && annotOk ? '和' : ''}${annotOk ? '超期原因记录' : ''}`);
     } else {
-      showToast('刷新失败：无法连接服务器，请检查网络或服务器状态');
+      showToast('刷新失败：无法连接服务器，请检查网络或服务器状态 Refresh failed — could not reach the server');
     }
   });
 
   document.getElementById('clearBtn').addEventListener('click', async () => {
-    if(!confirm('确定要清除数据吗？这是所有人共享的数据，清除后所有打开此链接的人都会看到初始数据集，此操作不可撤销。')) return;
+    if(!confirm('确定要清除数据吗？这是所有人共享的数据，清除后所有打开此链接的人下次同步都会看到初始数据集，此操作不可撤销。')) return;
     RAW = DEFAULT_DATA.map(r => ({...r}));
     rebuildComputed();
     refreshFilterOptions();
     page = 1; applyAndRender();
     try{
       await saveData(RAW.map(stripComputed));
-      showToast('已清除共享数据，恢复为初始数据集');
+      showToast('已清除共享数据，恢复为初始数据集 Cleared — restored to the initial dataset');
     }catch(err){
       console.error('clear failed', err);
-      showToast('已在当前页面恢复初始数据集，但清除服务器数据失败，请检查网络或服务器状态');
+      showToast('已在当前页面恢复初始数据集，但清除服务器数据失败 Reset locally, but clearing the server failed');
     }
   });
 }
@@ -1362,12 +1379,12 @@ function refreshFilterOptions(){
   filterState.region = new Set(Array.from(filterState.region).filter(v => regions.includes(v)));
   filterState.level = new Set(Array.from(filterState.level).filter(v => levels.includes(v)));
   filterState.month = new Set(Array.from(filterState.month).filter(v => months.includes(v)));
-  renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域');
-  renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级');
-  renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份');
-  updateMselLabel('panelRegion', regions, filterState.region, '全部区域');
-  updateMselLabel('panelLevel', levels, filterState.level, '全部等级');
-  updateMselLabel('panelMonth', months, filterState.month, '全部月份');
+  renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
+  renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
+  renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
+  updateMselLabel('panelRegion', regions, filterState.region, '全部区域 All Regions');
+  updateMselLabel('panelLevel', levels, filterState.level, '全部等级 All Levels');
+  updateMselLabel('panelMonth', months, filterState.month, '全部月份 All Months');
 }
 
 function stripComputed(r){
@@ -1402,7 +1419,7 @@ async function boot(){
     applyAndRender();
   }catch(err){
     console.error('initial load from backend failed', err);
-    showToast('无法连接后端服务，当前显示的是本地快照数据');
+    showToast('无法连接后端服务，当前显示的是本地快照数据 Could not reach the backend — showing the local snapshot');
   }
 }
 
