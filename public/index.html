@@ -164,6 +164,11 @@
     background: var(--bg-elevated); border:1px solid var(--border); border-radius:8px;
     padding: 8px 12px; color: var(--text); font-size:13px; font-family: var(--font-mono);
   }
+  select{
+    background: var(--bg-elevated); border:1px solid var(--border); border-radius:8px;
+    padding: 8px 12px; color: var(--text); font-size:13px; font-family: var(--font-body);
+    min-width: 150px; cursor:pointer;
+  }
   input[type=text].search{ font-family: var(--font-body); min-width: 220px; }
   .field.grow{ flex:1; min-width: 220px; }
 
@@ -403,6 +408,15 @@
     </div>
 
     <div class="field">
+      <label class="bi"><span class="zh">超期原因</span><span class="en">Overdue Reason</span></label>
+      <select id="reasonFilledSelect">
+        <option value="all">全部 All</option>
+        <option value="filled">已填写 Filled</option>
+        <option value="unfilled">未填写 Unfilled</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label class="bi"><span class="zh">创建时间 从 (Create Datetime)</span><span class="en">Created From</span></label>
       <input type="date" id="dateFrom">
     </div>
@@ -517,6 +531,7 @@ const filterState = {
   done: true,
   undone: true,
   overdueOnly: false,
+  reasonFilled: 'all', // 'all' | 'filled' | 'unfilled' — only meaningful among overdue tickets
   dateFrom: '',
   dateTo: '',
   q: ''
@@ -540,10 +555,14 @@ function actionFor(category, reason, cause){
 }
 let ANNOTATIONS = {};
 
+function hasOverdueReason(row){
+  const a = ANNOTATIONS[String(row.orderNo)];
+  return !!(a && (a.category || a.reason || a.cause || (a.note && a.note.trim())));
+}
+
 /* ============ Storage helpers (backend API + MongoDB) ============ */
 // This build talks to the Express/MongoDB backend in ../server.js via a
-// same-origin REST API, so data is truly shared and persists for everyone —
-// no Claude account or paid plan required.
+// same-origin REST API, so data is truly shared and persists for everyone.
 async function apiGet(path){
   const res = await fetch(path);
   if(!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
@@ -570,10 +589,18 @@ async function loadAnnotations(){
   const map = await apiGet('/api/annotations');
   return map && typeof map === 'object' ? map : null;
 }
-async function saveAnnotations(){
-  // Persist the whole ANNOTATIONS map in one call — simplest and avoids
-  // partial-write ordering issues when several fields change quickly.
-  await apiSend('/api/annotations', 'PUT', ANNOTATIONS);
+async function saveAnnotations(orderNo){
+  // Only ever send the ONE ticket that actually changed, via the per-ticket
+  // upsert endpoint. This ticket's browser session might not have every
+  // other saved annotation loaded (slow network, server cold-start, etc.) —
+  // sending the whole in-memory map instead would risk wiping out entries
+  // this session never saw. Saving one key at a time makes that impossible.
+  const key = String(orderNo);
+  if(ANNOTATIONS[key]){
+    await apiSend(`/api/annotations/${encodeURIComponent(key)}`, 'PUT', ANNOTATIONS[key]);
+  } else {
+    await apiSend(`/api/annotations/${encodeURIComponent(key)}`, 'DELETE');
+  }
 }
 
 /* ============ Parsing / computing ============ */
@@ -784,6 +811,12 @@ function applyFilters(){
     if(r._isDone && !filterState.done) return false;
     if(!r._isDone && !filterState.undone) return false;
     if(filterState.overdueOnly && r._status !== 'overdue' && r._status !== 'overdue-open') return false;
+    if(filterState.reasonFilled !== 'all'){
+      const isOverdueStatus = r._status === 'overdue' || r._status === 'overdue-open';
+      const filled = isOverdueStatus && hasOverdueReason(r);
+      if(filterState.reasonFilled === 'filled' && !filled) return false;
+      if(filterState.reasonFilled === 'unfilled' && (!isOverdueStatus || filled)) return false;
+    }
     if(from && (!r._created || r._created < from)) return false;
     if(to && (!r._created || r._created > to)) return false;
     if(qLower){
@@ -1032,13 +1065,19 @@ function wireAnnotationControls(container){
         ANNOTATIONS[orderKey] = { category, reason, cause, actionText, note, updatedAt: new Date().toISOString() };
       }
       try{
-        await saveAnnotations();
+        await saveAnnotations(orderKey);
         metaEl.textContent = `已保存 · ${fmtDate(new Date()).replace(/<[^>]+>/g,'')}`;
         metaEl.style.color = 'var(--green)';
       }catch(err){
         console.error('save annotation failed', err);
         metaEl.textContent = '保存失败，请检查网络或服务器状态（内容已保留在当前页面）Save failed — check network/server (kept locally)';
         metaEl.style.color = 'var(--red)';
+      }
+      // If the "超期原因 / Overdue Reason" filter is active, this ticket may
+      // now need to drop out of (or into) the filtered list — re-render to
+      // reflect that. Harmless when the filter is off (no-op skip).
+      if(filterState.reasonFilled !== 'all'){
+        applyAndRender();
       }
     }
 
@@ -1263,6 +1302,11 @@ function initFilterControls(){
     page = 1; applyAndRender();
   });
 
+  document.getElementById('reasonFilledSelect').addEventListener('change', (e) => {
+    filterState.reasonFilled = e.target.value;
+    page = 1; applyAndRender();
+  });
+
   document.getElementById('dateFrom').addEventListener('change', (e) => { filterState.dateFrom = e.target.value; page = 1; applyAndRender(); });
   document.getElementById('dateTo').addEventListener('change', (e) => { filterState.dateTo = e.target.value; page = 1; applyAndRender(); });
 
@@ -1288,6 +1332,8 @@ function initFilterControls(){
     chipDone.querySelector('input').checked = true; chipDone.classList.add('active');
     chipUndone.querySelector('input').checked = true; chipUndone.classList.add('active');
     chipOverdue.querySelector('input').checked = false; chipOverdue.classList.remove('active');
+    filterState.reasonFilled = 'all';
+    document.getElementById('reasonFilledSelect').value = 'all';
     renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
     renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
     renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
@@ -1320,7 +1366,7 @@ function initFilterControls(){
       page = 1; applyAndRender();
       try{
         await saveData(RAW.map(stripComputed));
-        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据库（超期原因记录已按工单号自动匹配）Imported and synced to the database`);
+        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据（超期原因记录已按工单号自动匹配）`);
       }catch(err){
         console.error('save failed', err);
         showToast('已导入到当前页面，但保存到服务器失败，请检查网络或服务器状态 Saved locally, but syncing to the server failed');
