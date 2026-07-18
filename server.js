@@ -118,13 +118,8 @@ app.get('/api/annotations', async (req, res) => {
   }
 });
 
-// PUT upserts every entry in the provided map, leaving any other existing
-// annotations untouched. IMPORTANT: this used to delete the whole
-// collection and reinsert only what the browser currently had in memory —
-// if a browser's local copy was incomplete (e.g. a slow/failed load right
-// after the server woke up from a Render free-tier cold start), that wiped
-// out everyone else's saved reasons. Upserting per-key instead means an
-// incomplete local map can never delete data it doesn't know about.
+// PUT replaces the whole annotations map in one call (simplest for the
+// frontend, which keeps the full map in memory and re-sends it on every edit).
 app.put('/api/annotations', async (req, res) => {
   try {
     const map = req.body;
@@ -132,15 +127,10 @@ app.put('/api/annotations', async (req, res) => {
       return res.status(400).json({ error: 'Body must be a JSON object keyed by orderNo' });
     }
     const orderNos = Object.keys(map);
+    await Annotation.deleteMany({});
     if (orderNos.length) {
-      const ops = orderNos.map((orderNo) => ({
-        updateOne: {
-          filter: { orderNo },
-          update: { $set: { orderNo, ...map[orderNo] } },
-          upsert: true,
-        },
-      }));
-      await Annotation.bulkWrite(ops, { ordered: false });
+      const docs = orderNos.map((orderNo) => ({ orderNo, ...map[orderNo] }));
+      await Annotation.insertMany(docs, { ordered: false });
     }
     res.json({ ok: true, count: orderNos.length });
   } catch (err) {
