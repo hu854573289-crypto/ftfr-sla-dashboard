@@ -164,6 +164,11 @@
     background: var(--bg-elevated); border:1px solid var(--border); border-radius:8px;
     padding: 8px 12px; color: var(--text); font-size:13px; font-family: var(--font-mono);
   }
+  select{
+    background: var(--bg-elevated); border:1px solid var(--border); border-radius:8px;
+    padding: 8px 12px; color: var(--text); font-size:13px; font-family: var(--font-body);
+    min-width: 150px; cursor:pointer;
+  }
   input[type=text].search{ font-family: var(--font-body); min-width: 220px; }
   .field.grow{ flex:1; min-width: 220px; }
 
@@ -311,9 +316,43 @@
     :root{ --grid-cols: minmax(90px,1fr) minmax(150px,1.8fr) 96px 128px; }
     .list-head .col.hide-narrow, .list-row .cell.hide-narrow{ display:none; }
   }
+  /* ---------- Password gate ---------- */
+  #passwordGate{
+    position: fixed; inset: 0; z-index: 2000; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  #passwordGate.hidden{ display: none; }
+  .gate-card{
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 32px 30px; width: 100%; max-width: 380px; text-align: center;
+  }
+  .gate-eyebrow{
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--accent-2);
+    text-transform: uppercase; margin-bottom: 10px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600;
+  }
+  .gate-eyebrow .dot{ width:6px; height:6px; border-radius:50%; background: var(--accent-2); }
+  .gate-card h2{ font-family: var(--font-display); font-size: 19px; font-weight:700; margin: 0 0 8px; color: var(--text); }
+  .gate-sub{ font-size: 12.5px; color: var(--text-dim); margin: 0 0 20px; }
+  #gateForm input[type=password]{
+    width: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: 14px; color: var(--text); text-align: center; letter-spacing: 0.05em;
+  }
+  .gate-error{ margin-top: 12px; font-size: 12px; color: var(--red); }
 </style>
 </head>
 <body>
+<div id="passwordGate">
+  <div class="gate-card">
+    <div class="gate-eyebrow"><span class="dot"></span>FIELD SERVICE &middot; SLA MONITORING</div>
+    <h2>FTFR Service SLA Board</h2>
+    <p class="gate-sub">请输入密码以查看看板 · Enter password to view the board</p>
+    <form id="gateForm" autocomplete="off">
+      <input type="password" id="gatePassword" placeholder="密码 Password" autocomplete="off">
+      <button type="submit" class="btn primary" style="width:100%; justify-content:center; margin-top:10px;">进入 Enter</button>
+    </form>
+    <div class="gate-error" id="gateError" style="display:none;">密码错误，请重试 Incorrect password, please try again</div>
+  </div>
+</div>
 <div class="wrap">
 
   <header class="top">
@@ -328,9 +367,14 @@
         导入数据 Import
       </label>
       <input type="file" id="fileInput" accept=".xlsx,.xls">
-      <button class="btn" id="syncBtn" title="从服务器重新拉取最新的共享数据和备注 Refresh from server">
+      <label class="btn" for="reasonFileInput" title="导入之前导出并填写好的超期原因 Excel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6M9 8h1M4 4h16v16H4z"/></svg>
+        导入超期原因 Import Reasons
+      </label>
+      <input type="file" id="reasonFileInput" accept=".xlsx,.xls">
+      <button class="btn" id="syncBtn" title="从共享存储读取其他人最后导入的数据（需登录 Claude 账号）">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h5M20 20v-5h-5M5.5 9a7 7 0 0112-3M18.5 15a7 7 0 01-12 3"/></svg>
-        刷新数据 Refresh
+        同步数据 Sync
       </button>
       <button class="btn" id="exportBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V4a1 1 0 011-1h14a1 1 0 011 1v3"/></svg>
@@ -403,6 +447,15 @@
     </div>
 
     <div class="field">
+      <label class="bi"><span class="zh">超期原因</span><span class="en">Overdue Reason</span></label>
+      <select id="reasonFilledSelect">
+        <option value="all">全部 All</option>
+        <option value="filled">已填写 Filled</option>
+        <option value="unfilled">未填写 Unfilled</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label class="bi"><span class="zh">创建时间 从 (Create Datetime)</span><span class="en">Created From</span></label>
       <input type="date" id="dateFrom">
     </div>
@@ -429,7 +482,7 @@
     </div>
   </section>
 
-  <footer class="note">数据保存在你自己部署的 MongoDB 数据库中，打开这个网址的所有人看到、修改的都是同一份实时数据。<br>Data lives in your own MongoDB database — everyone who opens this URL sees and edits the same live data.</footer>
+  <footer class="note">打开链接即可查看当前数据，无需登录。若要"导入""同步""清除"共享数据，需要登录 Claude 账号，且该账号需为 Pro / Max / Team / Enterprise 等付费版（Anthropic 的共享存储功能不支持 Free 版）。<br>The board is viewable without login. Importing / syncing / clearing shared data requires a Claude account on a paid plan (Pro/Max/Team/Enterprise — shared storage isn't available on the Free plan).</footer>
 </div>
 
 <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
@@ -484,6 +537,17 @@ const HEADER_ALIASES = {
   custLevel: ['Customer Level IVD'],
 };
 
+// Header aliases for re-importing overdue reasons from a previously
+// exported (and hand-filled-in) Excel file — see reasonFileInput handler.
+const REASON_IMPORT_ALIASES = {
+  orderNo: ['工单号','Order No','Order No.','orderNo'],
+  category: ['超期 Category','Category'],
+  reason: ['超期 Reason','Reason'],
+  cause: ['超期 Cause statement','Cause statement','Cause'],
+  actionText: ['超期 Actions','Actions'],
+  note: ['超期备注','Note','备注'],
+};
+
 const THRESHOLD = { VIP1: 24, VIP2: 48, DEFAULT: 72 };
 
 // Completion rule:
@@ -510,6 +574,9 @@ let sortState = { key: 'created', dir: 'desc' };
 let page = 1;
 const PAGE_SIZE = 20;
 
+// Default filter view: VIP1 + VIP2 customers, overdue tickets only.
+const DEFAULT_LEVELS = ['VIP1', 'VIP2'];
+
 const filterState = {
   region: new Set(),
   level: new Set(),
@@ -517,6 +584,7 @@ const filterState = {
   done: true,
   undone: true,
   overdueOnly: false,
+  reasonFilled: 'all', // 'all' | 'filled' | 'unfilled' — only meaningful among overdue tickets
   dateFrom: '',
   dateTo: '',
   q: ''
@@ -540,40 +608,38 @@ function actionFor(category, reason, cause){
 }
 let ANNOTATIONS = {};
 
-/* ============ Storage helpers (backend API + MongoDB) ============ */
-// This build talks to the Express/MongoDB backend in ../server.js via a
-// same-origin REST API, so data is truly shared and persists for everyone —
-// no Claude account or paid plan required.
-async function apiGet(path){
-  const res = await fetch(path);
-  if(!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
-  return res.json();
-}
-async function apiSend(path, method, body){
-  const res = await fetch(path, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  if(!res.ok) throw new Error(`${method} ${path} failed: ${res.status}`);
-  return res.json();
+function hasOverdueReason(row){
+  const a = ANNOTATIONS[String(row.orderNo)];
+  return !!(a && (a.category || a.reason || a.cause || (a.note && a.note.trim())));
 }
 
+/* ============ Storage helpers ============ */
+// NOTE: Claude's shared/persistent storage requires (a) the artifact to be
+// published, (b) the account performing the storage action to be on a paid
+// plan (Pro/Max/Team/Enterprise — Free plan cannot use it), and (c) for
+// anonymous link visitors, being logged into a Claude account at all.
+// To avoid forcing every visitor through a login wall just to *view* the
+// board, we never call storage automatically on page load — only when the
+// user explicitly clicks Import / Sync / Clear, or edits an annotation.
 async function loadStoredData(){
-  const rows = await apiGet('/api/tickets');
-  return Array.isArray(rows) && rows.length ? rows : null;
+  const res = await window.storage.get('ftfr-dataset', true);
+  if(res && res.value){
+    return JSON.parse(res.value);
+  }
+  return null;
 }
 async function saveData(rows){
-  await apiSend('/api/tickets', 'PUT', rows);
+  await window.storage.set('ftfr-dataset', JSON.stringify(rows), true);
 }
 async function loadAnnotations(){
-  const map = await apiGet('/api/annotations');
-  return map && typeof map === 'object' ? map : null;
+  const res = await window.storage.get('ftfr-annotations', true);
+  if(res && res.value){
+    return JSON.parse(res.value);
+  }
+  return null;
 }
 async function saveAnnotations(){
-  // Persist the whole ANNOTATIONS map in one call — simplest and avoids
-  // partial-write ordering issues when several fields change quickly.
-  await apiSend('/api/annotations', 'PUT', ANNOTATIONS);
+  await window.storage.set('ftfr-annotations', JSON.stringify(ANNOTATIONS), true);
 }
 
 /* ============ Parsing / computing ============ */
@@ -707,6 +773,8 @@ function uniqueValues(key){
   return Array.from(set).sort();
 }
 
+let mselDirty = false;
+
 function renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel){
   const panel = document.getElementById(panelId);
   panel.innerHTML = '';
@@ -720,7 +788,7 @@ function renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel){
     cb.addEventListener('change', () => {
       if(cb.checked) selectedSet.add(v); else selectedSet.delete(v);
       updateMselLabel(panelId, values, selectedSet, allLabel);
-      page = 1; applyAndRender();
+      mselDirty = true; // applied when the dropdown closes — see setupMselToggle()
     });
     panel.appendChild(wrap);
   });
@@ -731,13 +799,15 @@ function renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel){
     values.forEach(v => selectedSet.add(v));
     renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel);
     updateMselLabel(panelId, values, selectedSet, allLabel);
-    page = 1; applyAndRender();
+    document.getElementById(panelId).classList.add('open');
+    mselDirty = true;
   });
   actions.querySelector('[data-act="none"]').addEventListener('click', () => {
     selectedSet.clear();
     renderMultiSelect(panelId, btnSelector, values, selectedSet, allLabel);
     updateMselLabel(panelId, values, selectedSet, allLabel);
-    page = 1; applyAndRender();
+    document.getElementById(panelId).classList.add('open');
+    mselDirty = true;
   });
   panel.appendChild(actions);
 }
@@ -756,18 +826,35 @@ function updateMselLabel(panelId, values, selectedSet, allLabel){
   }
 }
 
+// Closes any open filter dropdown(s) and — if a checkbox actually changed
+// while it was open — applies the filters exactly once. This lets people
+// tick several checkboxes in a row without the list re-rendering (and the
+// dropdown potentially jumping around) after every single click; the
+// filter is applied only once they click elsewhere or toggle the dropdown
+// closed themselves.
+function closeMselPanels(){
+  let anyWasOpen = false;
+  document.querySelectorAll('.msel-panel.open').forEach(p => { p.classList.remove('open'); anyWasOpen = true; });
+  if(anyWasOpen && mselDirty){
+    mselDirty = false;
+    page = 1;
+    applyAndRender();
+  }
+}
+
 function setupMselToggle(){
   document.querySelectorAll('.msel-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const targetId = btn.getAttribute('data-target');
-      document.querySelectorAll('.msel-panel').forEach(p => {
-        if(p.id === targetId) p.classList.toggle('open'); else p.classList.remove('open');
-      });
+      const panel = document.getElementById(targetId);
+      const wasOpen = panel.classList.contains('open');
+      closeMselPanels();
+      if(!wasOpen) panel.classList.add('open');
     });
   });
   document.addEventListener('click', () => {
-    document.querySelectorAll('.msel-panel').forEach(p => p.classList.remove('open'));
+    closeMselPanels();
   });
 }
 
@@ -784,6 +871,12 @@ function applyFilters(){
     if(r._isDone && !filterState.done) return false;
     if(!r._isDone && !filterState.undone) return false;
     if(filterState.overdueOnly && r._status !== 'overdue' && r._status !== 'overdue-open') return false;
+    if(filterState.reasonFilled !== 'all'){
+      const isOverdueStatus = r._status === 'overdue' || r._status === 'overdue-open';
+      const filled = isOverdueStatus && hasOverdueReason(r);
+      if(filterState.reasonFilled === 'filled' && !filled) return false;
+      if(filterState.reasonFilled === 'unfilled' && (!isOverdueStatus || filled)) return false;
+    }
     if(from && (!r._created || r._created < from)) return false;
     if(to && (!r._created || r._created > to)) return false;
     if(qLower){
@@ -1037,8 +1130,14 @@ function wireAnnotationControls(container){
         metaEl.style.color = 'var(--green)';
       }catch(err){
         console.error('save annotation failed', err);
-        metaEl.textContent = '保存失败，请检查网络或服务器状态（内容已保留在当前页面）Save failed — check network/server (kept locally)';
+        metaEl.textContent = '保存到共享存储失败（需登录付费版 Claude 账号），但已保留在当前页面';
         metaEl.style.color = 'var(--red)';
+      }
+      // If the "超期原因 / Overdue Reason" filter is active, this ticket may
+      // now need to drop out of (or into) the filtered list — re-render to
+      // reflect that. Harmless when the filter is off (no-op skip).
+      if(filterState.reasonFilled !== 'all'){
+        applyAndRender();
       }
     }
 
@@ -1236,6 +1335,13 @@ function initFilterControls(){
   const regions = uniqueValues('region');
   const levels = uniqueValues('custLevel');
   const months = uniqueValues('_serviceMonth');
+
+  // Default view: VIP1 + VIP2 customers, overdue tickets only. The person
+  // can change or clear this like any other filter; Reset Filters returns
+  // to this same default rather than to "show everything".
+  filterState.level = new Set(DEFAULT_LEVELS.filter(l => levels.includes(l)));
+  filterState.overdueOnly = true;
+
   renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
   renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
   renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
@@ -1257,9 +1363,16 @@ function initFilterControls(){
   });
 
   const chipOverdue = document.getElementById('chipOverdue');
+  chipOverdue.querySelector('input').checked = true;
+  chipOverdue.classList.add('active');
   chipOverdue.querySelector('input').addEventListener('change', (e) => {
     filterState.overdueOnly = e.target.checked;
     chipOverdue.classList.toggle('active', filterState.overdueOnly);
+    page = 1; applyAndRender();
+  });
+
+  document.getElementById('reasonFilledSelect').addEventListener('change', (e) => {
+    filterState.reasonFilled = e.target.value;
     page = 1; applyAndRender();
   });
 
@@ -1274,11 +1387,11 @@ function initFilterControls(){
 
   document.getElementById('resetFilters').addEventListener('click', () => {
     filterState.region.clear();
-    filterState.level.clear();
+    filterState.level = new Set(DEFAULT_LEVELS.filter(l => levels.includes(l)));
     filterState.month.clear();
     filterState.done = true;
     filterState.undone = true;
-    filterState.overdueOnly = false;
+    filterState.overdueOnly = true;
     filterState.dateFrom = '';
     filterState.dateTo = '';
     filterState.q = '';
@@ -1287,7 +1400,9 @@ function initFilterControls(){
     document.getElementById('searchBox').value = '';
     chipDone.querySelector('input').checked = true; chipDone.classList.add('active');
     chipUndone.querySelector('input').checked = true; chipUndone.classList.add('active');
-    chipOverdue.querySelector('input').checked = false; chipOverdue.classList.remove('active');
+    chipOverdue.querySelector('input').checked = true; chipOverdue.classList.add('active');
+    filterState.reasonFilled = 'all';
+    document.getElementById('reasonFilledSelect').value = 'all';
     renderMultiSelect('panelRegion', 'mselRegion', regions, filterState.region, '全部区域 All Regions');
     renderMultiSelect('panelLevel', 'mselLevel', levels, filterState.level, '全部等级 All Levels');
     renderMultiSelect('panelMonth', 'mselMonth', months, filterState.month, '全部月份 All Months');
@@ -1320,10 +1435,55 @@ function initFilterControls(){
       page = 1; applyAndRender();
       try{
         await saveData(RAW.map(stripComputed));
-        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据库（超期原因记录已按工单号自动匹配）Imported and synced to the database`);
+        showToast(`已导入 ${rows.length} 条记录，并同步到共享数据（超期原因记录已按工单号自动匹配）`);
       }catch(err){
         console.error('save failed', err);
-        showToast('已导入到当前页面，但保存到服务器失败，请检查网络或服务器状态 Saved locally, but syncing to the server failed');
+        showToast('已导入到当前页面，但同步共享数据失败（需登录付费版 Claude 账号），详见下方说明');
+      }
+    }catch(err){
+      console.error(err);
+      showToast('导入失败，请检查文件格式');
+    }
+    e.target.value = '';
+  });
+
+
+  document.getElementById('reasonFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: false });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      let updated = 0, skippedNoOrder = 0;
+      rows.forEach(row => {
+        const orderNoRaw = pickField(row, REASON_IMPORT_ALIASES.orderNo);
+        if(orderNoRaw == null || String(orderNoRaw).trim() === ''){ skippedNoOrder++; return; }
+        const orderKey = String(orderNoRaw).trim();
+        const category = String(pickField(row, REASON_IMPORT_ALIASES.category) || '').trim();
+        const reason = String(pickField(row, REASON_IMPORT_ALIASES.reason) || '').trim();
+        const cause = String(pickField(row, REASON_IMPORT_ALIASES.cause) || '').trim();
+        const noteVal = String(pickField(row, REASON_IMPORT_ALIASES.note) || '').trim();
+        const actionTextRaw = String(pickField(row, REASON_IMPORT_ALIASES.actionText) || '').trim();
+        if(!category && !reason && !cause && !noteVal) return; // nothing filled in for this row
+
+        // Recompute the standard action text from the Category/Reason/Cause
+        // tree where possible; fall back to whatever text was in the file
+        // (covers hand-edited/custom action notes).
+        const actionText = actionFor(category, reason, cause) || actionTextRaw;
+        ANNOTATIONS[orderKey] = { category, reason, cause, actionText, note: noteVal, updatedAt: new Date().toISOString() };
+        updated++;
+      });
+
+      applyAndRender();
+      try{
+        await saveAnnotations();
+        showToast(`已导入 ${updated} 条超期原因记录并同步保存${skippedNoOrder ? `（${skippedNoOrder} 行没有工单号，已跳过）` : ''}`);
+      }catch(err){
+        console.error('save annotations failed', err);
+        showToast(`已导入 ${updated} 条到当前页面，但同步共享数据失败（需登录付费版 Claude 账号）`);
       }
     }catch(err){
       console.error(err);
@@ -1352,7 +1512,7 @@ function initFilterControls(){
     if(dataOk || annotOk){
       showToast(`已同步最新的共享${dataOk ? '数据' : ''}${dataOk && annotOk ? '和' : ''}${annotOk ? '超期原因记录' : ''}`);
     } else {
-      showToast('刷新失败：无法连接服务器，请检查网络或服务器状态 Refresh failed — could not reach the server');
+      showToast('同步失败：需要登录 Claude 账号（且为付费版）才能读取共享数据');
     }
   });
 
@@ -1363,11 +1523,12 @@ function initFilterControls(){
     refreshFilterOptions();
     page = 1; applyAndRender();
     try{
-      await saveData(RAW.map(stripComputed));
-      showToast('已清除共享数据，恢复为初始数据集 Cleared — restored to the initial dataset');
+      await window.storage.delete('ftfr-dataset', true);
+      await saveData(RAW);
+      showToast('已清除共享数据，恢复为初始数据集');
     }catch(err){
       console.error('clear failed', err);
-      showToast('已在当前页面恢复初始数据集，但清除服务器数据失败 Reset locally, but clearing the server failed');
+      showToast('已在当前页面恢复初始数据集，但清除共享存储失败（需登录付费版 Claude 账号）');
     }
   });
 }
@@ -1394,36 +1555,50 @@ function stripComputed(r){
 
 /* ============ Boot ============ */
 async function boot(){
-  // Start with the embedded snapshot immediately so the page never looks empty...
   RAW = DEFAULT_DATA.map(r => ({...r}));
   rebuildComputed();
   initFilterControls();
   applyAndRender();
-
-  // ...then fetch the real shared data from the backend and swap it in.
-  try{
-    const [stored, annotations] = await Promise.all([
-      loadStoredData().catch(() => null),
-      loadAnnotations().catch(() => null),
-    ]);
-    if(stored && stored.length){
-      RAW = stored;
-    } else if(stored === null){
-      // Nothing saved yet on the server — seed it with the embedded snapshot
-      // so the dataset exists in MongoDB from the very first visit.
-      saveData(RAW.map(stripComputed)).catch(err => console.error('seed save failed', err));
-    }
-    if(annotations) ANNOTATIONS = annotations;
-    rebuildComputed();
-    refreshFilterOptions();
-    applyAndRender();
-  }catch(err){
-    console.error('initial load from backend failed', err);
-    showToast('无法连接后端服务，当前显示的是本地快照数据 Could not reach the backend — showing the local snapshot');
-  }
 }
 
-boot();
+/* ============ Password gate ============ */
+// NOTE: this is a client-side gate only — the password check and the data
+// itself both live in this HTML file, so anyone who views the page source
+// can find the password or the embedded data. It stops casual viewing of a
+// shared link, but it is NOT real security for sensitive data.
+const GATE_PASSWORD = 'Mindray99!';
+const GATE_STORAGE_KEY = 'ftfr-gate-authed';
+
+function unlockGate(){
+  document.getElementById('passwordGate').classList.add('hidden');
+  boot();
+}
+
+function initGate(){
+  try{
+    if(localStorage.getItem(GATE_STORAGE_KEY) === '1'){
+      unlockGate();
+      return;
+    }
+  }catch(e){ /* localStorage unavailable — fall through to prompt every time */ }
+
+  document.getElementById('gatePassword').focus();
+  document.getElementById('gateForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('gatePassword');
+    if(input.value === GATE_PASSWORD){
+      try{ localStorage.setItem(GATE_STORAGE_KEY, '1'); }catch(e){}
+      document.getElementById('gateError').style.display = 'none';
+      unlockGate();
+    } else {
+      document.getElementById('gateError').style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  });
+}
+
+initGate();
 </script>
 </body>
 </html>
