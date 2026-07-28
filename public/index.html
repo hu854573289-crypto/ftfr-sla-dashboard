@@ -489,7 +489,7 @@
         <input type="date" id="dateTo">
       </div>
       <div class="field grow">
-        <label class="bi"><span class="zh">搜索 (工单号 / 序列号 / 客户)</span><span class="en">Search (Order/Serial/Customer)</span></label>
+        <label class="bi"><span class="zh">搜索 (工单号 / 序列号 / 客户名称 / 客户ID)</span><span class="en">Search (Order/Serial/Customer/Customer ID)</span></label>
         <input type="text" class="search" id="searchBox" placeholder="输入关键字搜索... Search...">
       </div>
       <div class="spacer"></div>
@@ -535,6 +535,7 @@ const DETAIL_FIELDS = [
   { key:'orderStatus', label:'工单状态 (Order Status)', enLabel:'Order Status' },
   { key:'completed', label:'服务完成时间', enLabel:'Service Completed', type:'date' },
   { key:'customerName', label:'客户名称', enLabel:'Customer Name' },
+  { key:'customerId', label:'客户 ID', enLabel:'Customer ID' },
   { key:'engineerName', label:'服务工程师', enLabel:'Service Engineer' },
   { key:'mindrayEngineer', label:'迈瑞工程师', enLabel:'Mindray Engineer' },
   { key:'threshold', label:'SLA 阈值', enLabel:'SLA Threshold' },
@@ -558,6 +559,7 @@ const HEADER_ALIASES = {
   engineerName: ['Service Engineer Name'],
   mindrayEngineer: ['Mindray Engineer Name'],
   customerName: ['Customer Name'],
+  customerId: ['Customer ID','Customer Id','Customer No.','Customer No','Customer Code','Customer Number'],
   custLevel: ['Customer Level IVD'],
 };
 
@@ -822,6 +824,7 @@ function importWorkbook(wb){
     engineerName: pickField(row, HEADER_ALIASES.engineerName),
     mindrayEngineer: pickField(row, HEADER_ALIASES.mindrayEngineer),
     customerName: pickField(row, HEADER_ALIASES.customerName),
+    customerId: pickField(row, HEADER_ALIASES.customerId),
     custLevel: pickField(row, HEADER_ALIASES.custLevel),
   }));
   return rows;
@@ -922,7 +925,7 @@ function applyFilters(){
     if(from && (!r._created || r._created < from)) return false;
     if(to && (!r._created || r._created > to)) return false;
     if(qLower){
-      const hay = [r.orderNo, r.serial, r.customerName, r.engineerName, r.mindrayEngineer, r.model, r.orderStatus].join(' ').toLowerCase();
+      const hay = [r.orderNo, r.serial, r.customerName, r.customerId, r.engineerName, r.mindrayEngineer, r.model, r.orderStatus].join(' ').toLowerCase();
       if(!hay.includes(qLower)) return false;
     }
     return true;
@@ -1425,6 +1428,7 @@ function exportFiltered(){
       '服务工程师': r.engineerName || '',
       '迈瑞工程师': r.mindrayEngineer || '',
       '客户名称': r.customerName || '',
+      '客户ID(Customer ID)': r.customerId || '',
       'SLA阈值(h)': r._threshold,
       'SLA时长(h)': r._sla != null ? Number(r._sla.toFixed(2)) : '',
       '状态': STATUS_LABELS[r._status] || '—',
