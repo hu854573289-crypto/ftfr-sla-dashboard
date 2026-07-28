@@ -214,6 +214,34 @@
   .reset-link{ background:none; border:none; color: var(--text-dim); font-size:12.5px; text-decoration: underline; text-underline-offset:3px; }
   .reset-link:hover{ color: var(--text); }
 
+
+
+  /* ---------- Overdue reason analytics ---------- */
+  .reason-analysis{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:16px 18px; margin-bottom:18px;
+  }
+  .reason-analysis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+  .reason-analysis-sub{font-size:11.5px;color:var(--text-dimmer);margin-top:4px;}
+  .reason-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .reason-summary-card{background:var(--bg-panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
+  .reason-summary-card .rs-label{font-size:10.5px;color:var(--text-dimmer);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .reason-summary-card .rs-value{font-size:22px;font-weight:700;margin-top:4px;}
+  .reason-summary-card .rs-value.red{color:var(--red);}.reason-summary-card .rs-value.green{color:var(--green);}.reason-summary-card .rs-value.amber{color:var(--amber);}
+  .reason-analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .reason-chart{background:var(--bg-panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:14px;min-width:0;}
+  .reason-chart-title{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:10px;}
+  .reason-bar-row{display:grid;grid-template-columns:minmax(115px,1.2fr) minmax(100px,2fr) 44px;gap:9px;align-items:center;padding:5px 0;}
+  .reason-bar-label{font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .reason-bar-track{height:8px;background:#e9ebef;border-radius:999px;overflow:hidden;}
+  .reason-bar-fill{height:100%;background:var(--accent);border-radius:999px;min-width:2px;}
+  .reason-bar-fill.category{background:var(--accent-2);}.reason-bar-value{font-size:11.5px;color:var(--text-dim);text-align:right;font-family:var(--font-mono);}
+  .reason-region-table{grid-column:1/-1;background:var(--bg-panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:14px;overflow:auto;}
+  .reason-region-row{display:grid;grid-template-columns:minmax(140px,1.5fr) 80px 80px 90px 1fr;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border-soft);font-size:12px;min-width:600px;}
+  .reason-region-row.head{font-size:10px;color:var(--text-dimmer);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .reason-empty{padding:24px;text-align:center;color:var(--text-dimmer);font-size:12.5px;}
+  @media(max-width:900px){.reason-summary{grid-template-columns:repeat(2,1fr)}.reason-analysis-grid{grid-template-columns:1fr}.reason-region-table{grid-column:auto}}
+
   /* ---------- Region breakdown ---------- */
   .region-panel{
     background: var(--bg-panel); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -400,6 +428,18 @@
       <div class="region-panel-sub">随筛选条件联动 — 当前列表按区域拆分的完成情况 · Reflects current filters — completion breakdown by region</div>
     </div>
     <div class="region-table" id="regionStats"></div>
+  </section>
+
+
+
+  <section class="reason-analysis" id="reasonAnalysisPanel">
+    <div class="reason-analysis-head">
+      <div>
+        <div class="bi-title"><span class="zh">超期原因分析</span><span class="en">Overdue Reason Analysis</span></div>
+        <div class="reason-analysis-sub">仅统计当前筛选结果中的超期工单，并随区域、客户等级、月份和日期筛选联动。</div>
+      </div>
+    </div>
+    <div id="reasonAnalysis"></div>
   </section>
 
   <section class="filters">
@@ -1239,6 +1279,88 @@ function renderRegionStats(){
   el.innerHTML = head + rows;
 }
 
+
+
+function escapeHtml(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function countBy(items, getter){
+  const map = new Map();
+  items.forEach(item => {
+    const key = getter(item);
+    if(!key) return;
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return Array.from(map.entries()).map(([label,count]) => ({label,count})).sort((a,b) => b.count-a.count || String(a.label).localeCompare(String(b.label)));
+}
+
+function reasonBarsHTML(items, fillClass, limit=8){
+  if(!items.length) return '<div class="reason-empty">暂无已填写数据 No filled reason data</div>';
+  const shown = items.slice(0, limit);
+  const max = Math.max(...shown.map(x => x.count), 1);
+  return shown.map(x => `
+    <div class="reason-bar-row" title="${escapeHtml(x.label)}: ${x.count}">
+      <div class="reason-bar-label">${escapeHtml(x.label)}</div>
+      <div class="reason-bar-track"><div class="reason-bar-fill ${fillClass}" style="width:${Math.max(3, x.count/max*100)}%"></div></div>
+      <div class="reason-bar-value">${x.count}</div>
+    </div>`).join('');
+}
+
+function renderReasonAnalysis(){
+  const el = document.getElementById('reasonAnalysis');
+  if(!el) return;
+  const overdueRows = VIEW.filter(r => r._status === 'overdue' || r._status === 'overdue-open');
+  const enriched = overdueRows.map(r => ({ row:r, annotation:ANNOTATIONS[String(r.orderNo)] || {} }));
+  const filledRows = enriched.filter(x => hasOverdueReason(x.row));
+  const total = overdueRows.length;
+  const filled = filledRows.length;
+  const unfilled = total - filled;
+  const fillRate = total ? Math.round(filled/total*100) : 0;
+
+  const categoryCounts = countBy(filledRows, x => x.annotation.category || '未分类 Uncategorised');
+  const causeCounts = countBy(filledRows, x => x.annotation.cause || x.annotation.reason || x.annotation.category || '未分类 Uncategorised');
+
+  const regionMap = new Map();
+  enriched.forEach(x => {
+    const region = x.row.region || '（未填写）';
+    if(!regionMap.has(region)) regionMap.set(region,{region,total:0,filled:0});
+    const item = regionMap.get(region); item.total++;
+    if(hasOverdueReason(x.row)) item.filled++;
+  });
+  const regions = Array.from(regionMap.values()).map(x => ({...x,unfilled:x.total-x.filled,rate:x.total?Math.round(x.filled/x.total*100):0})).sort((a,b)=>b.total-a.total);
+
+  if(total === 0){
+    el.innerHTML = '<div class="reason-empty">当前筛选条件下没有超期工单 No overdue tickets under current filters</div>';
+    return;
+  }
+
+  const regionRows = regions.map(x => `
+    <div class="reason-region-row">
+      <div>${escapeHtml(x.region)}</div><div>${x.total}</div><div style="color:var(--green)">${x.filled}</div><div style="color:var(--red)">${x.unfilled}</div>
+      <div class="region-bar-wrap"><div class="region-bar"><div class="region-bar-fill" style="width:${x.rate}%"></div></div><div class="region-bar-pct">${x.rate}%</div></div>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="reason-summary">
+      <div class="reason-summary-card"><div class="rs-label">超期工单 Overdue</div><div class="rs-value red">${total}</div></div>
+      <div class="reason-summary-card"><div class="rs-label">已填写原因 Filled</div><div class="rs-value green">${filled}</div></div>
+      <div class="reason-summary-card"><div class="rs-label">未填写原因 Unfilled</div><div class="rs-value amber">${unfilled}</div></div>
+      <div class="reason-summary-card"><div class="rs-label">原因填写率 Completion Rate</div><div class="rs-value">${fillRate}%</div></div>
+    </div>
+    <div class="reason-analysis-grid">
+      <div class="reason-chart"><div class="reason-chart-title">原因类别分布 Category Distribution</div>${reasonBarsHTML(categoryCounts,'category')}</div>
+      <div class="reason-chart"><div class="reason-chart-title">主要直接原因 Top Cause Statements</div>${reasonBarsHTML(causeCounts,'')}</div>
+      <div class="reason-region-table">
+        <div class="reason-chart-title">各区域超期原因填写情况 Region Reason Coverage</div>
+        <div class="reason-region-row head"><div>区域 Region</div><div>超期 Total</div><div>已填 Filled</div><div>未填 Unfilled</div><div>填写率 Coverage</div></div>
+        ${regionRows}
+      </div>
+    </div>`;
+}
+
 function renderFooter(){
   const total = VIEW.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -1270,6 +1392,7 @@ function applyAndRender(){
   applyFilters();
   renderKPIs();
   renderRegionStats();
+  renderReasonAnalysis();
   renderListHead();
   renderListBody();
   renderFooter();
